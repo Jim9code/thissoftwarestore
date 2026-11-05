@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ease-lux: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-fluid: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+  scroll-behavior: auto;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.font-serif-editorial {
+  font-family: 'Instrument Serif', Georgia, serif;
+}
+
+/* Custom subtle scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #160E09;
+}
+::-webkit-scrollbar-thumb {
+  background: #5C4331;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #E59838;
+}
+
+/* Wind-carved eroded sandstone text effect */
+.stone-monolith-text {
+  background: linear-gradient(
+    175deg,
+    #F3DEC0 0%,
+    #D9B382 32%,
+    #A67B4B 64%,
+    #4E3422 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0px 14px 24px rgba(14, 8, 4, 0.65));
+}
+
+.stone-monolith-night {
+  background: linear-gradient(
+    175deg,
+    #C5B6A2 0%,
+    #7D8A7B 38%,
+    #493628 72%,
+    #1B120C 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0px 16px 32px rgba(229, 152, 56, 0.22));
+}
+
+/* 3D Solid Molded Sand Typography (Matching Reference Vector Sand Mold) */
+.sand-mold-3d {
+  font-family: 'Titan One', 'Fredoka', 'Lilita One', cursive, sans-serif;
+  color: #E2A158;
+  background: linear-gradient(
+    180deg,
+    #FDF0D5 0%,
+    #F7D296 20%,
+    #E8A95E 55%,
+    #CF8132 85%,
+    #B2641C 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  position: relative;
+  display: inline-block;
+  line-height: 1.15;
+  text-shadow:
+    /* Top-left soft sun highlight rim */
+    -1px -1px 1px rgba(255, 250, 235, 0.95),
+    -2px -2px 0 rgba(255, 240, 210, 0.4),
+    /* 3D Solid Extrusion Depth (pillowy beveled downward-right side walls) */
+    1px 2px 0 #BD7630,
+    2px 4px 0 #AA6423,
+    3px 6px 0 #985419,
+    4px 8px 0 #854410,
+    5px 10px 0 #733709,
+    6px 12px 0 #612B04,
+    7px 14px 0 #4E2002,
+    /* Ambient ground contact shadow spreading onto the sand */
+    8px 18px 18px rgba(35, 14, 3, 0.75),
+    12px 26px 36px rgba(20, 8, 1, 0.55),
+    18px 36px 50px rgba(0, 0, 0, 0.35);
+  filter: drop-shadow(-1px -2px 2px rgba(255, 245, 220, 0.7));
+}
+
+.sand-mold-btn {
+  font-family: 'Titan One', 'Fredoka', 'Lilita One', cursive, sans-serif;
+  color: #E2A158;
+  background: linear-gradient(
+    180deg,
+    #FEF5E0 0%,
+    #F9DAA5 25%,
+    #EAA95E 65%,
+    #CC7E30 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow:
+    -1px -1px 1px rgba(255, 250, 235, 0.9),
+    1px 2px 0 #BD7630,
+    2px 3px 0 #9F5D1E,
+    3px 5px 0 #7C4111,
+    4px 7px 0 #5E2F09,
+    6px 10px 18px rgba(35, 14, 3, 0.7);
+  filter: drop-shadow(-1px -1px 1px rgba(255, 245, 220, 0.7));
+}
+
