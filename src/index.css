@@ -17,9 +17,15 @@ html, body {
   margin: 0;
   padding: 0;
   width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   scroll-behavior: auto;
+  font-family: 'Instrument Sans', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  background-color: #546652;
+  background-image: radial-gradient(circle, rgba(246, 242, 234, 0.48) 1.6px, transparent 1.6px);
+  background-size: 28px 28px;
+  background-position: center center;
+  background-attachment: fixed;
 }
 
 .tabular-nums {

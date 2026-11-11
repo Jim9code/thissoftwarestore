@@ -1,40 +1,20 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Wind,
-  Sun,
-  Moon,
-  Cpu,
-  ArrowDown,
-  Volume2,
-  VolumeX,
-  FastForward,
-  Sparkles,
-  Layers,
-} from 'lucide-react';
-import { DesertSandCanvas } from './components/DesertSandCanvas';
+import Lenis from 'lenis';
 import { CleanStorefront, CartItem } from './components/CleanStorefront';
 import { HeroSunCarousel, HeroSlide } from './components/HeroSunCarousel';
 import { PRODUCTS, Product } from './data/products';
-import { ProductIllustration } from './components/ProductIllustration';
 import { soundEngine } from './utils/soundEngine';
 
-const STORE_LOCK_KEY = 'thissoftwarestore_entered_clean_store_v3';
-
 export function App() {
-  const [isLockedStoreOnly, setIsLockedStoreOnly] = useState<boolean>(() => {
+  const [stage, setStage] = useState<'intro' | 'main'>(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('view') === 'store' || params.get('q') || params.get('cat')) {
-      return true;
+      return 'main';
     }
-    return sessionStorage.getItem(STORE_LOCK_KEY) === 'true';
+    return 'intro';
   });
 
-  const [stage, setStage] = useState<'intro' | 'storm' | 'journey' | 'store'>(
-    () => (isLockedStoreOnly ? 'store' : 'intro')
-  );
-
-  const [scrollProgress, setScrollProgress] = useState<number>(0);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [cart, setCart] = useState<CartItem[]>([
     {
@@ -44,103 +24,121 @@ export function App() {
     },
   ]);
 
-  const journeyContainerRef = useRef<HTMLDivElement | null>(null);
-  const introVideoRef = useRef<HTMLVideoElement | null>(null);
+  // Scroll progress & coordinates for the expanding circular dome transition
+  const [scrollProgress, setScrollProgress] = useState<number>(0);
+  const [currentScrollY, setCurrentScrollY] = useState<number>(0);
+  const [dimensions, setDimensions] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1440,
+    height: typeof window !== 'undefined' ? window.innerHeight : 900,
+  });
 
-  // Sync back-button navigation
+  // Lenis Weighted / Heavy Awwwards-grade Smooth Scroll Engine
   useEffect(() => {
-    const onPopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('view') === 'origin') {
-        sessionStorage.removeItem(STORE_LOCK_KEY);
-        setIsLockedStoreOnly(false);
-        setStage('journey');
-        window.scrollTo({ top: 0, behavior: 'auto' });
-      }
+    const handleResize = () => {
+      setDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
     };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
+    window.addEventListener('resize', handleResize);
+
+    const lenis = new Lenis({
+      duration: 1.35, // Weighted inertia (Awwwards-grade heavy scroll feel)
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // Smooth exponential deceleration
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      wheelMultiplier: 0.85, // Damped wheel response for grounded physical weight
+      touchMultiplier: 1.5,
+    });
+
+    (window as any).__lenis = lenis;
+
+    let rafId: number;
+    function raf(time: number) {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    }
+    rafId = requestAnimationFrame(raf);
+
+    lenis.on('scroll', ({ scroll }: { scroll: number }) => {
+      const threshold = Math.round(window.innerHeight * 0.75);
+      const progress = Math.min(1, Math.max(0, scroll / (threshold || 1)));
+      setScrollProgress(progress);
+      setCurrentScrollY(scroll);
+    });
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+      delete (window as any).__lenis;
+    };
   }, []);
 
-  // Track scroll depth across the 520vh cinematic viewport
+  // Control Lenis scrolling state based on intro vs main stage
   useEffect(() => {
-    if (isLockedStoreOnly || stage !== 'journey') return;
-
-    const handleScroll = () => {
-      if (!journeyContainerRef.current) return;
-      const journeyHeight = journeyContainerRef.current.offsetHeight - window.innerHeight;
-      if (journeyHeight <= 0) return;
-
-      const currentY = window.scrollY;
-      const progress = Math.min(1, Math.max(0, currentY / journeyHeight));
-      setScrollProgress(progress);
-      soundEngine.setDesertAtmosphere(progress, false);
-
-      // Lock into Clean Storefront once user reaches Act 5 threshold (progress >= 0.985)
-      if (progress >= 0.985) {
-        sessionStorage.setItem(STORE_LOCK_KEY, 'true');
-        const url = new URL(window.location.href);
-        url.searchParams.set('view', 'store');
-        window.history.pushState({ view: 'store' }, '', url.toString());
-
-        setIsLockedStoreOnly(true);
-        setStage('store');
-        soundEngine.setDesertAtmosphere(1, true);
-        window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    const lenis = (window as any).__lenis;
+    if (lenis) {
+      if (stage === 'intro') {
+        lenis.stop();
+        lenis.scrollTo(0, { immediate: true });
+      } else {
+        lenis.start();
       }
-    };
+    }
+  }, [stage]);
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [isLockedStoreOnly, stage]);
-
-  // Act 1 -> Act 2: Play the real Kling Sandstorm-to-Sun video on tap!
+  // Enter from Minimal Sage Green Intro Gate -> Always land cleanly on the Hero at scroll 0!
   const handleEnterFromIntro = () => {
-    if (stage === 'storm') return;
-    soundEngine.playSandstormSweep();
-    setStage('storm');
-
-    if (introVideoRef.current) {
-      introVideoRef.current.currentTime = 0;
-      introVideoRef.current.muted = isMuted;
-      introVideoRef.current.play().catch(() => {
-        // Fallback if browser requires muted playback
-        if (introVideoRef.current) {
-          introVideoRef.current.muted = true;
-          introVideoRef.current.play().catch(() => {});
-        }
-      });
+    soundEngine.init();
+    soundEngine.playClick(1.0);
+    setStage('main');
+    setCurrentScrollY(0);
+    setScrollProgress(0);
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    const lenis = (window as any).__lenis;
+    if (lenis) {
+      lenis.scrollTo(0, { immediate: true });
+      lenis.start();
     }
   };
 
-  const handleIntroVideoEnded = () => {
-    setStage('journey');
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  // Scroll smoothly down to the store section using Lenis weighted scroll
+  const handleScrollToStore = () => {
+    soundEngine.playClick(1.0);
+    const lenis = (window as any).__lenis;
+    const targetY = Math.round(dimensions.height * 0.75);
+    if (lenis) {
+      lenis.scrollTo(targetY, { duration: 1.3 });
+    } else {
+      window.scrollTo({ top: targetY, behavior: 'smooth' });
+    }
   };
 
-  const handleSkipToStore = () => {
-    soundEngine.playClick(1.1);
-    sessionStorage.setItem(STORE_LOCK_KEY, 'true');
-    const url = new URL(window.location.href);
-    url.searchParams.set('view', 'store');
-    window.history.pushState({ view: 'store' }, '', url.toString());
-    setIsLockedStoreOnly(true);
-    setStage('store');
-    soundEngine.setDesertAtmosphere(1, true);
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  // Scroll smoothly back up to the Hero section using Lenis weighted scroll
+  const handleScrollToHero = () => {
+    soundEngine.playClick(0.9);
+    const lenis = (window as any).__lenis;
+    if (lenis) {
+      lenis.scrollTo(0, { duration: 1.4 });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
-  const handleReplayDesertOrigin = () => {
-    sessionStorage.removeItem(STORE_LOCK_KEY);
-    const url = new URL(window.location.href);
-    url.searchParams.delete('view');
-    url.searchParams.delete('q');
-    url.searchParams.delete('cat');
-    window.history.pushState({ view: 'origin' }, '', url.toString());
-    setScrollProgress(0);
-    setIsLockedStoreOnly(false);
+  // Return to the intro gate
+  const handleReturnToIntro = () => {
+    soundEngine.playClick(0.9);
     setStage('intro');
+    setCurrentScrollY(0);
+    setScrollProgress(0);
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    const lenis = (window as any).__lenis;
+    if (lenis) {
+      lenis.scrollTo(0, { immediate: true });
+      lenis.stop();
+    }
   };
 
   const handleToggleMute = () => {
@@ -175,266 +173,163 @@ export function App() {
     });
   };
 
-  // Cinematic 9-Frame Scrollytelling Transitions:
-  // 1. 0.00 - 0.18: Blazing Sun Zenith (`desert-sun-zenith.jpg`)
-  // 2. 0.14 - 0.38: Vast Golden Dunes Horizon (`desert-day.jpg`)
-  // 3. 0.30 - 0.52: Wind-Carved Rock Monolith at Sunset (`desert-rock.jpg`)
-  // 4. 0.46 - 0.68: Same Rock Monolith at Night with Milky Way (`desert-rock-night.jpg`)
-  // 5. 0.62 - 0.80: Cascading Quartz Sand Streams (`sand-cascade-macro.jpg`)
-  // 6. 0.74 - 0.89: Molten Sand to Silicon Wafer Chip (`silicon-fusion.jpg`)
-  // 7. 0.85 - 0.99: Levitating Hardware Exploded Assembly (`chip-product-assembly.jpg`)
+  const expandDistance = Math.round(dimensions.height * 0.75);
+  const isFullyExpanded = currentScrollY >= expandDistance;
+  const isStarted = currentScrollY > 8;
 
-  const sunZenithOpacity = Math.max(0, 1 - scrollProgress * 5.5);
-  const dayDunesOpacity =
-    scrollProgress < 0.1
-      ? scrollProgress * 10
-      : scrollProgress < 0.28
-      ? 1
-      : Math.max(0, 1 - (scrollProgress - 0.28) * 8);
+  // Max radius needed to cover the entire viewport from bottom-center (50%, 102%)
+  const maxRadius = Math.ceil(
+    Math.sqrt(Math.pow(dimensions.width * 0.5, 2) + Math.pow(dimensions.height * 1.02, 2)) * 1.08
+  );
 
-  const rockDayOpacity =
-    scrollProgress < 0.26
-      ? 0
-      : scrollProgress < 0.36
-      ? (scrollProgress - 0.26) * 10
-      : scrollProgress < 0.48
-      ? 1
-      : Math.max(0, 1 - (scrollProgress - 0.48) * 9);
+  const expansionP = Math.min(1, Math.max(0, currentScrollY / (expandDistance || 1)));
+  // Smooth power curve for gradual expansion from small circle to full view
+  const currentRadius = Math.round(maxRadius * Math.pow(expansionP, 1.25));
 
-  const rockNightOpacity =
-    scrollProgress < 0.44
-      ? 0
-      : scrollProgress < 0.55
-      ? (scrollProgress - 0.44) * 9
-      : scrollProgress < 0.66
-      ? 1
-      : Math.max(0, 1 - (scrollProgress - 0.66) * 9);
+  // During scroll < expandDistance: Store is held at top: 0 on screen so the circle expands across it.
+  // Once scroll >= expandDistance: storeOffsetY = 0, so the store scrolls naturally with the scrollbar!
+  const storeOffsetY = currentScrollY < expandDistance
+    ? -(expandDistance - currentScrollY)
+    : 0;
 
-  const sandCascadeOpacity =
-    scrollProgress < 0.62
-      ? 0
-      : scrollProgress < 0.72
-      ? (scrollProgress - 0.62) * 10
-      : scrollProgress < 0.80
-      ? 1
-      : Math.max(0, 1 - (scrollProgress - 0.80) * 10);
+  // Circle center on the store element: exactly at the bottom-center of the screen
+  const circleCenterY = Math.round(dimensions.height * 1.02);
 
-  const siliconFusionOpacity =
-    scrollProgress < 0.74
-      ? 0
-      : scrollProgress < 0.82
-      ? (scrollProgress - 0.74) * 12
-      : scrollProgress < 0.89
-      ? 1
-      : Math.max(0, 1 - (scrollProgress - 0.89) * 12);
-
-  const chipAssemblyOpacity =
-    scrollProgress < 0.85 ? 0 : Math.min(1, (scrollProgress - 0.85) * 8);
+  const dynamicClipPath = isFullyExpanded
+    ? 'none'
+    : isStarted
+    ? `circle(${currentRadius}px at 50% ${circleCenterY}px)`
+    : 'circle(0px at 50% ${circleCenterY}px)';
 
   return (
-    <div className="relative min-h-[100dvh] w-full select-none sm:select-auto bg-[#160E09]">
-      {/* GPU Particles (Sand grains, storm swirl, chip lattice) */}
-      <DesertSandCanvas stage={stage} scrollProgress={scrollProgress} />
+    <div className="relative min-h-[100dvh] w-full select-none sm:select-auto">
+      {/* =====================================================================
+          GLOBAL STATIONARY SAGE GREEN DOTTED BACKGROUND
+          Stationary viewport layer: z-0 stays in front of body canvas,
+          allowing the Hero and Store contents (z-10) to glide over it seamlessly!
+      ====================================================================== */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{
+          backgroundColor: '#546652',
+          backgroundImage: 'radial-gradient(circle, rgba(246, 242, 234, 0.48) 1.6px, transparent 1.6px)',
+          backgroundSize: '28px 28px',
+          backgroundPosition: 'center center',
+        }}
+      />
 
       {/* =====================================================================
-          ACT 1 & 2: THE MOLDED SAND INTRO GATE + REAL KLING SANDSTORM-TO-SUN VIDEO
+          ACT 1: MINIMAL SAGE GREEN DOTTED INTRO (NO VIDEOS — PURE MINIMALISM)
       ====================================================================== */}
       <AnimatePresence>
-        {(stage === 'intro' || stage === 'storm') && !isLockedStoreOnly && (
+        {stage === 'intro' && (
           <motion.section
-            key="act1-desert-intro-video"
+            key="minimal-sage-intro-gate"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.75, ease: [0.16, 1, 0.3, 1] } }}
+            exit={{ opacity: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } }}
             onClick={handleEnterFromIntro}
-            className={`fixed inset-0 z-40 flex h-[100dvh] w-full flex-col items-center justify-between overflow-hidden px-6 py-8 text-[#F6F2EA] select-none ${
-              stage === 'intro' ? 'cursor-pointer' : 'pointer-events-none'
-            }`}
+            className="fixed inset-0 z-50 flex h-[100dvh] w-full cursor-pointer flex-col items-center justify-center overflow-hidden px-6 text-[#F6F2EA] select-none group"
+            style={{
+              backgroundColor: '#546652',
+              backgroundImage: 'radial-gradient(circle, rgba(246, 242, 234, 0.48) 1.6px, transparent 1.6px)',
+              backgroundSize: '28px 28px',
+              backgroundPosition: 'center center',
+            }}
           >
-            {/* Seamless Kling 4.0 Video: Paused on Frame 0 ("thissoftwarestore" + "tap to enter"), Plays on Tap -> Reveals Sun Zenith */}
-            <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#160E09]">
-              <video
-                ref={introVideoRef}
-                src="/videos/kling_20261106_VIDEO_A_sudden_v_1345_0.mp4"
-                poster="/images/desert-intro-molded.jpg"
-                playsInline
-                preload="auto"
-                onEnded={handleIntroVideoEnded}
-                className="h-full w-full object-cover"
-              />
-            </div>
+            {/* Center Lockup: Logo at the side of thissoftwarestore + tap to enter */}
+            <div className="flex flex-col items-center justify-center text-center">
+              <div className="flex items-center justify-center gap-3.5 sm:gap-4.5 transition-transform duration-300 group-hover:scale-[1.02]">
+                <img
+                  src="/images/thissoftware-emblem-transparent.png"
+                  alt="thissoftware"
+                  className="h-9 w-9 sm:h-12 sm:w-12 object-contain drop-shadow-sm"
+                />
+                <h1 className="font-display text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-[-0.035em] text-[#F6F2EA]">
+                  thissoftwarestore
+                </h1>
+              </div>
 
-            <div className="relative z-10 my-auto" />
-            <div className="relative z-10 h-6" />
+              <div className="mt-5 sm:mt-6 flex items-center gap-2">
+                <span className="font-mono text-xs sm:text-sm uppercase tracking-[0.24em] text-[#F6F2EA]/70 transition-colors duration-200 group-hover:text-[#F6F2EA]">
+                  tap to enter
+                </span>
+              </div>
+            </div>
           </motion.section>
         )}
       </AnimatePresence>
 
       {/* =====================================================================
-          ACTS 2 -> 4: 9-FRAME PHOTOREALISTIC PARALLAX SCROLL JOURNEY
+          ACT 2 & 3: UNIFIED STORE EXPERIENCE (HERO AT TOP -> STORE DIRECTLY BELOW)
+          ZERO SHOP LOCK — SCROLL FREELY DOWN TO SHOP & BACK UP TO HERO!
       ====================================================================== */}
-      {!isLockedStoreOnly && (
-        <div ref={journeyContainerRef} className="relative h-[520dvh] w-full">
-          <div className="sticky top-0 flex h-[100dvh] w-full flex-col justify-between overflow-hidden">
-            {/* Frame 1: Blazing Desert Sun Zenith (desert-sun-zenith.jpg) */}
-            <div
-              className="pointer-events-none absolute inset-0 transition-opacity duration-300"
-              style={{ opacity: sunZenithOpacity }}
-            >
-              <img
-                src="/images/desert-sun-zenith.jpg"
-                alt="Blazing Desert Sun at Solar Zenith"
-                className="h-full w-full object-cover"
-                style={{
-                  transform: `scale(${1 + scrollProgress * 0.25}) translateY(${scrollProgress * 60}px)`,
-                }}
-              />
-            </div>
+      {stage === 'main' && (
+        <main className="relative z-10 w-full">
+          {/* 1. FIXED STATIONARY HERO SECTION (Zero movement, stays locked to viewport!) */}
+          <section
+            id="hero-section"
+            className="fixed inset-0 h-[100dvh] w-full overflow-hidden bg-transparent z-0"
+            style={{
+              visibility: isFullyExpanded ? 'hidden' : 'visible',
+              pointerEvents: isStarted ? 'none' : 'auto',
+            }}
+          >
+            <HeroSunCarousel
+              cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
+              isMuted={isMuted}
+              onToggleMute={handleToggleMute}
+              onOpenStore={handleScrollToStore}
+              onQuickAddSlide={(slide: HeroSlide, selectedSize: string) => {
+                const matchedProduct =
+                  PRODUCTS.find((p) => p.id === slide.productId) ||
+                  (slide.id === 'headphones-sand'
+                    ? PRODUCTS[1]
+                    : slide.id === 'jacket-404'
+                    ? PRODUCTS[4]
+                    : PRODUCTS[2]);
+                handleAddToCart(
+                  matchedProduct,
+                  matchedProduct.finishes[0].name,
+                  selectedSize
+                );
+              }}
+            />
+          </section>
 
-            {/* Frame 2: Vast Golden Sand Dunes Horizon (desert-day.jpg) */}
-            <div
-              className="pointer-events-none absolute inset-0 transition-opacity duration-300"
-              style={{ opacity: dayDunesOpacity }}
-            >
-              <img
-                src="/images/desert-day.jpg"
-                alt="Daylight Desert Horizon"
-                className="h-full w-full object-cover"
-                style={{
-                  transform: `scale(${1.08 - (scrollProgress - 0.1) * 0.15}) translateY(${-(scrollProgress - 0.15) * 40}px)`,
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#160E09] via-transparent to-transparent opacity-60" />
-            </div>
+          {/* 2. SCROLL TRACK SPACER FOR THE EXPANSION */}
+          <div
+            style={{ height: `${expandDistance}px` }}
+            className="w-full pointer-events-none"
+          />
 
-            {/* Frame 3: Open-Air Desert Product Showcase Ground (desert-showcase.jpg) */}
-            <div
-              className="pointer-events-none absolute inset-0 transition-opacity duration-300"
-              style={{ opacity: rockDayOpacity }}
-            >
-              <img
-                src="/images/desert-showcase.jpg"
-                alt="Open-Air Desert Product Showcase Ground"
-                className="h-full w-full object-cover brightness-[1.03]"
-                style={{
-                  transform: `scale(${1.04 - (scrollProgress - 0.3) * 0.08})`,
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#160E09]/40 via-transparent to-[#160E09]/75" />
-            </div>
-
-            {/* Frame 4: Same Open-Air Desert Ground at Midnight (desert-showcase-night.jpg) */}
-            <div
-              className="pointer-events-none absolute inset-0 transition-opacity duration-300"
-              style={{ opacity: rockNightOpacity }}
-            >
-              <img
-                src="/images/desert-showcase-night.jpg"
-                alt="Open-Air Desert Product Ground at Midnight under Milky Way"
-                className="h-full w-full object-cover brightness-[1.06]"
-                style={{
-                  transform: `scale(${1.02 + (scrollProgress - 0.45) * 0.08})`,
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#160E09]/30 to-[#160E09]" />
-            </div>
-
-            {/* Frame 5: Cascading Quartz Sand Streams (sand-cascade-macro.jpg) */}
-            <div
-              className="pointer-events-none absolute inset-0 transition-opacity duration-300"
-              style={{ opacity: sandCascadeOpacity }}
-            >
-              <img
-                src="/images/sand-cascade-macro.jpg"
-                alt="Cascading Quartz Sand Waterfall"
-                className="h-full w-full object-cover brightness-[1.1] contrast-[1.08]"
-                style={{
-                  transform: `scale(${1.1 - (scrollProgress - 0.62) * 0.15}) translateY(${(scrollProgress - 0.62) * 35}px)`,
-                }}
-              />
-              <div className="absolute inset-0 bg-black/45" />
-            </div>
-
-            {/* Frame 6: Molten Sand to Silicon Wafer Chip (silicon-fusion.jpg) */}
-            <div
-              className="pointer-events-none absolute inset-0 transition-opacity duration-300"
-              style={{ opacity: siliconFusionOpacity }}
-            >
-              <img
-                src="/images/silicon-fusion.jpg"
-                alt="Molten Sand Fusing to Silicon Wafer"
-                className="h-full w-full object-cover brightness-[1.12] contrast-[1.12]"
-                style={{
-                  transform: `scale(${1.08 - (scrollProgress - 0.74) * 0.16})`,
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#160E09] via-black/35 to-black/55" />
-            </div>
-
-            {/* Frame 7: Exploded Tech Hardware Assembly (chip-product-assembly.jpg) */}
-            <div
-              className="pointer-events-none absolute inset-0 transition-opacity duration-300"
-              style={{ opacity: chipAssemblyOpacity }}
-            >
-              <img
-                src="/images/chip-product-assembly.jpg"
-                alt="Hardware Assembly around Silicon Core"
-                className="h-full w-full object-cover brightness-[1.08]"
-                style={{
-                  transform: `scale(${1.05 - (scrollProgress - 0.85) * 0.08})`,
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#F6F2EA] via-black/20 to-black/60" />
-            </div>
-
-            {/* Slanted Diagonal Hero Product Carousel Floating Directly in Front of the Sun */}
-            {stage === 'journey' && scrollProgress < 0.22 && (
-              <div
-                className="relative z-20 h-full w-full transition-opacity duration-300"
-                style={{
-                  opacity: sunZenithOpacity,
-                  pointerEvents: scrollProgress < 0.14 ? 'auto' : 'none',
-                }}
-              >
-                <HeroSunCarousel
-                  cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
-                  isMuted={isMuted}
-                  onToggleMute={handleToggleMute}
-                  onOpenStore={handleSkipToStore}
-                  onQuickAddSlide={(slide: HeroSlide, selectedSize: string) => {
-                    const matchedProduct =
-                      PRODUCTS.find((p) => p.id === slide.productId) ||
-                      (slide.id === 'headphones-sand'
-                        ? PRODUCTS[1]
-                        : slide.id === 'jacket-404'
-                        ? PRODUCTS[4]
-                        : PRODUCTS[2]);
-                    handleAddToCart(
-                      matchedProduct,
-                      matchedProduct.finishes[0].name,
-                      selectedSize
-                    );
-                  }}
-                />
-              </div>
-            )}
+          {/* 3. THE SINGLE STORE SECTION (Expands on top of Hero, then scrolls naturally) */}
+          <div
+            id="store-section"
+            className="relative z-10 w-full"
+            style={{
+              transform: currentScrollY < expandDistance
+                ? `translate3d(0, ${storeOffsetY}px, 0)`
+                : 'none',
+              clipPath: dynamicClipPath,
+              WebkitClipPath: dynamicClipPath,
+              visibility: isStarted ? 'visible' : 'hidden',
+              opacity: isStarted ? 1 : 0,
+              pointerEvents: isFullyExpanded ? 'auto' : isStarted ? 'auto' : 'none',
+            }}
+          >
+            <CleanStorefront
+              cart={cart}
+              onAddToCart={handleAddToCart}
+              onUpdateQuantity={handleUpdateQuantity}
+              isMuted={isMuted}
+              onToggleMute={handleToggleMute}
+              onReplayDesertOrigin={handleReturnToIntro}
+              onScrollToHero={handleScrollToHero}
+            />
           </div>
-        </div>
+        </main>
       )}
-
-      {/* =====================================================================
-          ACT 5: THE CLEAN COLORED E-COMMERCE STOREFRONT
-          (Sage Green, Walnut Brown, Amber Glow — One-Way Locked!)
-      ====================================================================== */}
-      <CleanStorefront
-        cart={cart}
-        onAddToCart={handleAddToCart}
-        onUpdateQuantity={handleUpdateQuantity}
-        isMuted={isMuted}
-        onToggleMute={handleToggleMute}
-        onReplayDesertOrigin={handleReplayDesertOrigin}
-        isLockedStoreOnly={isLockedStoreOnly}
-      />
     </div>
   );
 }

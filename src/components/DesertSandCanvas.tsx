@@ -137,22 +137,19 @@ export const DesertSandCanvas: React.FC<DesertSandCanvasProps> = ({
         }
 
         if (isChipFusion) {
-          // Normalize fusion intensity (0 to 1)
-          const fusionT = Math.min(1, Math.max(0, (p - 0.73) / 0.14));
-          const targetX = centerX + g.chipOffsetX;
-          const targetY = centerY + g.chipOffsetY;
+          // Swirl golden silica sparks around the photorealistic TS-M1 processor cutout
+          const angle = i * 0.25 + p * 18;
+          const radius = 140 + (i % 7) * 28;
+          const targetX = centerX + Math.cos(angle) * radius;
+          const targetY = centerY + Math.sin(angle) * (radius * 0.65);
 
-          // Magnetic pull toward Silicon Wafer lattice coordinates
-          g.x += (targetX - g.x) * (0.09 + fusionT * 0.14);
-          g.y += (targetY - g.y) * (0.09 + fusionT * 0.14);
+          g.x += (targetX - g.x) * 0.08;
+          g.y += (targetY - g.y) * 0.08;
 
-          // Molten Amber Glow -> Crystalline Sage/Gold Silicon color shift
-          const r = Math.round(229 - fusionT * 65);
-          const gr = Math.round(152 + fusionT * 35);
-          const b = Math.round(56 + fusionT * 65);
-
-          ctx.fillStyle = `rgba(${r}, ${gr}, ${b}, ${0.65 + fusionT * 0.35})`;
-          ctx.fillRect(g.x - g.size, g.y - g.size, g.size * 1.9, g.size * 1.9);
+          ctx.fillStyle = `rgba(255, 200, 95, ${g.alpha * 0.75})`;
+          ctx.beginPath();
+          ctx.arc(g.x, g.y, g.size * 1.1, 0, Math.PI * 2);
+          ctx.fill();
           continue;
         }
 
@@ -234,7 +231,7 @@ export const DesertSandCanvas: React.FC<DesertSandCanvasProps> = ({
   return (
     <canvas
       ref={canvasRef}
-      className="pointer-events-none fixed inset-0 z-20 h-full w-full"
+      className="pointer-events-none absolute inset-0 z-10 h-full w-full"
     />
   );
 };

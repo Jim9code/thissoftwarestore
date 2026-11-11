@@ -45,9 +45,9 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', '"Inter"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        display: ['"Syne"', '"Plus Jakarta Sans"', 'sans-serif'],
-        sand: ['"Titan One"', '"Fredoka"', '"Lilita One"', 'cursive', 'sans-serif'],
+        sans: ['"Instrument Sans"', '"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        display: ['"Instrument Sans"', '"Plus Jakarta Sans"', 'sans-serif'],
+        serif: ['"Instrument Serif"', 'Georgia', 'serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       transitionTimingFunction: {
