@@ -181,6 +181,63 @@ class SoundEngine {
     });
   }
 
+  // Soft thermal-printer stepper feed pulses for the animated order receipt
+  public playReceiptPrint() {
+    this.init();
+    if (!this.ctx || !this.masterGain || this.isMuted) return;
+
+    const now = this.ctx.currentTime;
+    const pulseOffsets = [0.06, 0.24, 0.42, 0.62, 0.82, 1.04, 1.22];
+    pulseOffsets.forEach((offset, idx) => {
+      if (!this.ctx || !this.masterGain) return;
+      const t = now + offset;
+      const osc = this.ctx.createOscillator();
+      const filter = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(520 + (idx % 3) * 65, t);
+      osc.frequency.exponentialRampToValueAtTime(240, t + 0.06);
+
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(900, t);
+      filter.Q.setValueAtTime(1.4, t);
+
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.linearRampToValueAtTime(0.045, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0008, t + 0.075);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(t);
+      osc.stop(t + 0.085);
+    });
+  }
+
+  // Tactile rubber stamp thud when "PAID" lands on the receipt
+  public playStampThud() {
+    this.init();
+    if (!this.ctx || !this.masterGain || this.isMuted) return;
+
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(145, now);
+    osc.frequency.exponentialRampToValueAtTime(48, now + 0.11);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.16, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.15);
+  }
+
   // Starts a unique generative musical loop when entering a Product Spotlight page
   public startProductMusic(style: SoundscapeType) {
     this.init();

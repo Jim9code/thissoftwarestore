@@ -4,13 +4,14 @@ import {
   ChevronLeft,
   ChevronRight,
   ShoppingCart,
-  Heart,
   Volume2,
   VolumeX,
   Instagram,
   Globe,
   Terminal,
   ArrowDown,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { soundEngine } from '../utils/soundEngine';
 
@@ -21,8 +22,8 @@ export interface HeroSlide {
   headlineLine2: string;
   description: string;
   image: string;
-  price: number;
-  oldPrice: number;
+  priceLabel: string;
+  specNote: string;
   sizes: string[];
   bottomCaptionLine1: string;
   bottomCaptionLine2: string;
@@ -32,52 +33,52 @@ export interface HeroSlide {
 
 export const HERO_SLIDES: HeroSlide[] = [
   {
-    id: 'jacket-404',
-    navLabel: 'PUFFER JACKET',
-    headlineLine1: 'Stand out',
-    headlineLine2: 'Without trying',
+    id: 'sw-essential-hoodie',
+    navLabel: 'PEACH HOODIE',
+    headlineLine1: 'Warm fleece,',
+    headlineLine2: 'Quiet syntax',
     description:
-      "It's not just about staying warm. Engineered with 404 // ROUTE_NOT_FOUND telemetry and 800-fill silica-shell insulation, this jacket wraps you in lightweight desert warmth.",
-    image: '/images/carousel/jacket-404.png',
-    price: 149,
-    oldPrice: 199,
-    sizes: ['36', '38', '40'],
-    bottomCaptionLine1: 'Confidence,',
-    bottomCaptionLine2: 'wrapped in warmth',
-    ambientTint: 'rgba(215, 105, 18, 0.24)',
-    productId: 'ts-ap2-jacket',
+      'Washed Warm Peach 350 GSM relaxed-fit pullover featuring the geometric S chest badge and >_ SYNTAXWEAR sleeve print. Launch Batch 001 open.',
+    image: '/images/carousel/hero-peach-hoodie.png',
+    priceLabel: '$89',
+    specNote: 'WARM PEACH // -19%',
+    sizes: ['S', 'M', 'L', 'XL'],
+    bottomCaptionLine1: 'Warm Peach Fleece,',
+    bottomCaptionLine2: 'theme edition 01',
+    ambientTint: 'rgba(217, 138, 99, 0.24)',
+    productId: 'sw-essential-hoodie',
   },
   {
-    id: 'headphones-sand',
-    navLabel: 'SAND HEADPHONES',
-    headlineLine1: 'Pure silence',
-    headlineLine2: 'Sculpted in sand',
+    id: 'sw-404-distressed-tee',
+    navLabel: '404 PITCH TEE',
+    headlineLine1: 'Boxy drape,',
+    headlineLine2: 'Error 404',
     description:
-      'Molded from compressed Sahara quartz sand composite with brushed bronze yokes and zero-noise acoustic chambers. Feel the desert horizon in spatial studio clarity.',
-    image: '/images/carousel/headphones-sand.png',
-    price: 249,
-    oldPrice: 319,
-    sizes: ['36', '38', '40'],
-    bottomCaptionLine1: 'Silence,',
-    bottomCaptionLine2: 'molded from silica',
-    ambientTint: 'rgba(194, 142, 68, 0.22)',
-    productId: 'ts-h1-headphones',
+      'Pitch Black 260 GSM heavyweight 100% cotton oversized tee with distressed 404 // ROUTE_ERR print and geometric S+404 chest emblem.',
+    image: '/images/carousel/hero-pitch-tee.png',
+    priceLabel: '$48',
+    specNote: 'PITCH BLACK // -25%',
+    sizes: ['S', 'M', 'L', 'XL'],
+    bottomCaptionLine1: 'Pitch Black Jersey,',
+    bottomCaptionLine2: 'theme edition 02',
+    ambientTint: 'rgba(22, 22, 24, 0.22)',
+    productId: 'sw-404-distressed-tee',
   },
   {
-    id: 'tshirt-commit',
-    navLabel: 'COMMIT TEE',
-    headlineLine1: 'Ship clean',
-    headlineLine2: 'Every commit',
+    id: 'sw-signature-cap',
+    navLabel: 'SAGE CAP',
+    headlineLine1: 'Sage crown,',
+    headlineLine2: 'Monogram S',
     description:
-      'Cut from heavyweight 320GSM unbleached desert ecru cotton with high-density walnut branch-graph print. Initial desert release compiled with zero errors.',
-    image: '/images/carousel/tshirt-commit.png',
-    price: 89,
-    oldPrice: 129,
-    sizes: ['36', '38', '40'],
-    bottomCaptionLine1: 'Precision,',
-    bottomCaptionLine2: 'woven in cotton',
-    ambientTint: 'rgba(145, 108, 72, 0.22)',
-    productId: 'ts-ap1-hoodie',
+      'Deep Botanical Sage cotton twill cap anchored by off-white 3D interlocking S embroidery — designed for everyday wear beyond the terminal.',
+    image: '/images/carousel/hero-sage-cap.png',
+    priceLabel: '$32',
+    specNote: 'BOTANICAL SAGE // -20%',
+    sizes: ['ADJ'],
+    bottomCaptionLine1: 'Botanical Sage Twill,',
+    bottomCaptionLine2: 'theme edition 03',
+    ambientTint: 'rgba(84, 102, 82, 0.24)',
+    productId: 'sw-signature-cap',
   },
 ];
 
@@ -85,7 +86,11 @@ interface HeroSunCarouselProps {
   cartCount: number;
   isMuted: boolean;
   onToggleMute: () => void;
+  isDark?: boolean;
+  onToggleDark?: () => void;
   onOpenStore: () => void;
+  onOpenBag?: () => void;
+  onOpenSell?: () => void;
   onQuickAddSlide: (slide: HeroSlide, selectedSize: string) => void;
 }
 
@@ -93,18 +98,17 @@ export const HeroSunCarousel: React.FC<HeroSunCarouselProps> = ({
   cartCount,
   isMuted,
   onToggleMute,
+  isDark = false,
+  onToggleDark,
   onOpenStore,
+  onOpenBag,
+  onOpenSell,
   onQuickAddSlide,
 }) => {
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [outgoingSlide, setOutgoingSlide] = useState<HeroSlide | null>(null);
   const [slideDirection, setSlideDirection] = useState<number>(1);
-  const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({
-    'jacket-404': '36',
-    'headphones-sand': '36',
-    'tshirt-commit': '36',
-  });
-  const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
+  const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({});
   const [justAdded, setJustAdded] = useState<boolean>(false);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -117,7 +121,7 @@ export const HeroSunCarousel: React.FC<HeroSunCarouselProps> = ({
   const currentSlide = HERO_SLIDES[activeIndex];
   const nextIndex = (activeIndex + 1) % HERO_SLIDES.length;
   const nextSlide = HERO_SLIDES[nextIndex];
-  const currentSize = selectedSizes[currentSlide.id] || '36';
+  const currentSize = selectedSizes[currentSlide.id] || currentSlide.sizes[0] || 'L';
 
   // =========================================================================
   // 1. MASTER GSAP MULTI-DIRECTIONAL ENTRANCE TIMELINE (Runs right after Video Ends)
@@ -531,11 +535,11 @@ export const HeroSunCarousel: React.FC<HeroSunCarouselProps> = ({
         >
           <img
             src="/images/thissoftware-emblem-transparent.png"
-            alt="thissoftware"
+            alt="SyntaxWear S+404"
             className="h-7 w-7 object-contain drop-shadow-sm transition-transform group-hover:scale-105"
           />
           <span className="font-display text-base sm:text-lg font-extrabold tracking-[-0.035em] text-[#F6F2EA] group-hover:text-[#FFCC70] transition-colors">
-            thissoftwarestore
+            SyntaxWear
           </span>
         </div>
 
@@ -563,13 +567,29 @@ export const HeroSunCarousel: React.FC<HeroSunCarouselProps> = ({
           >
             ALL PRODUCTS
           </button>
+          {onOpenSell && (
+            <button
+              type="button"
+              onClick={() => {
+                soundEngine.playClick(1.05);
+                onOpenSell();
+              }}
+              className="gsap-top-nav-pill rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#FFCC70] transition-colors hover:bg-white/10 hover:text-white"
+            >
+              SELL WITH US
+            </button>
+          )}
         </nav>
 
         {/* Top-Right: Circular Icon Controls (Slide in from Right Edge) */}
         <div className="flex items-center gap-2.5">
           <button
-            onClick={onOpenStore}
-            title="Open Store & Bag"
+            onClick={() => {
+              soundEngine.playClick(1.0);
+              if (onOpenBag) onOpenBag();
+              else onOpenStore();
+            }}
+            title="Open Shopping Bag"
             className="gsap-top-right-icon relative flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/30 text-white/90 backdrop-blur-md transition hover:bg-black/50 active:scale-95"
           >
             <ShoppingCart className="h-4 w-4" />
@@ -580,23 +600,17 @@ export const HeroSunCarousel: React.FC<HeroSunCarouselProps> = ({
             )}
           </button>
 
-          <button
-            onClick={() => {
-              soundEngine.playClick(1.2);
-              setLikedIds((prev) => ({ ...prev, [currentSlide.id]: !prev[currentSlide.id] }));
-            }}
-            title="Save to Wishlist"
-            className={`gsap-top-right-icon flex h-9 w-9 items-center justify-center rounded-full border border-white/15 backdrop-blur-md transition active:scale-95 ${
-              likedIds[currentSlide.id]
-                ? 'bg-white text-[#D9534F]'
-                : 'bg-black/30 text-white/90 hover:bg-black/50'
-            }`}
-          >
-            <Heart
-              className="h-4 w-4"
-              fill={likedIds[currentSlide.id] ? 'currentColor' : 'none'}
-            />
-          </button>
+          {onToggleDark && (
+            <button
+              type="button"
+              onClick={onToggleDark}
+              title={isDark ? 'Switch Storefront to Light Mode' : 'Switch Storefront to Dark Mode'}
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="gsap-top-right-icon flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/30 text-[#FFCC70] backdrop-blur-md transition hover:bg-black/50 active:scale-95"
+            >
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+          )}
 
           <button
             onClick={onToggleMute}
@@ -649,7 +663,7 @@ export const HeroSunCarousel: React.FC<HeroSunCarouselProps> = ({
               onClick={handleGetTheLook}
               className="gsap-left-cta mt-6 inline-flex items-center gap-2.5 rounded-full bg-white px-6 py-2.5 text-xs font-semibold text-[#1F140C] shadow-[0_10px_28px_rgba(0,0,0,0.22)] transition-transform hover:scale-105 hover:bg-[#FFF9F0] active:scale-95"
             >
-              <span>{justAdded ? 'Added to bag ✓' : 'Get the look'}</span>
+              <span>{justAdded ? 'Added to waitlist ✓' : 'Save launch spec'}</span>
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -710,20 +724,19 @@ export const HeroSunCarousel: React.FC<HeroSunCarouselProps> = ({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Price + Struck Compare Price + Circular Size Selector (Slides in from Right) */}
+        {/* RIGHT COLUMN: Price TBD Status + Proposed Sizes (Slides in from Right) */}
         <div className="order-3 md:col-span-4 flex flex-col items-start md:items-end justify-center text-left md:text-right">
           <div className="flex flex-col items-start md:items-end">
-            <div className="gsap-right-price font-display text-3xl sm:text-4xl lg:text-[42px] font-semibold tracking-tight text-white drop-shadow-sm">
-              ${currentSlide.price}
+            <div className="gsap-right-price font-display text-2xl sm:text-3xl lg:text-[36px] font-semibold tracking-tight text-white drop-shadow-sm">
+              {currentSlide.priceLabel}
             </div>
-            <div className="gsap-right-price relative mt-0.5 font-display text-xl sm:text-2xl font-medium text-white/75">
-              <span>${currentSlide.oldPrice}</span>
-              <span className="absolute left-[-6%] right-[-6%] top-1/2 h-[2px] -translate-y-1/2 bg-white/90" />
+            <div className="gsap-right-price mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[#FFCC70]/90">
+              {currentSlide.specNote}
             </div>
 
             <div className="mt-7 flex flex-col items-start md:items-end">
               <span className="gsap-right-size-label mb-3 text-xs font-medium text-white/85 drop-shadow-sm">
-                Choose your size:
+                Proposed sizes:
               </span>
               <div className="flex items-center gap-2.5">
                 {currentSlide.sizes.map((size) => {
@@ -732,7 +745,7 @@ export const HeroSunCarousel: React.FC<HeroSunCarouselProps> = ({
                     <button
                       key={size}
                       onClick={() => handleSizeSelect(size)}
-                      className={`gsap-right-size-btn flex h-11 w-11 items-center justify-center rounded-full text-xs font-semibold transition-colors duration-200 ${
+                      className={`gsap-right-size-btn flex h-11 min-w-[44px] px-3 items-center justify-center rounded-full text-xs font-semibold transition-colors duration-200 ${
                         isSelected
                           ? 'bg-white text-[#1F140C] shadow-[0_6px_20px_rgba(0,0,0,0.28)] scale-105'
                           : 'bg-black/30 text-white/85 border border-white/15 hover:bg-black/45 hover:text-white'
